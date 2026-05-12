@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.gramaangana.ui.screens.*
 import com.example.gramaangana.ui.theme.GramaAnganaTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
@@ -42,6 +43,14 @@ class MainActivity : ComponentActivity() {
 fun GramaAnganaApp() {
 
     val navController = rememberNavController()
+
+    val auth = FirebaseAuth.getInstance()
+
+    val startDestination =
+        if (auth.currentUser != null)
+            "home"
+        else
+            "login"
 
     val currentRoute =
         navController.currentBackStackEntryFlow
@@ -70,7 +79,7 @@ fun GramaAnganaApp() {
 
         NavHost(
             navController = navController,
-            startDestination = "login",
+            startDestination = startDestination,
             modifier = Modifier.padding(paddingValues)
         ) {
 
@@ -79,6 +88,24 @@ fun GramaAnganaApp() {
                 LoginScreen(
                     onLogin = {
                         navController.navigate("home")
+                    },
+
+                    onSignupClick = {
+                        navController.navigate("signup")
+                    }
+                )
+            }
+
+            composable("signup") {
+
+                SignupScreen(
+
+                    onSignupSuccess = {
+                        navController.navigate("home")
+                    },
+
+                    onBackToLogin = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -105,6 +132,10 @@ fun GramaAnganaApp() {
 
             composable("board") {
                 EventBoardScreen()
+            }
+
+            composable("adminBookings") {
+                AdminBookingsScreen()
             }
         }
     }

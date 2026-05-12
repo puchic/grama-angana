@@ -1,5 +1,7 @@
 package com.example.gramaangana.ui.screens
-
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.shape.CircleShape
+import com.google.firebase.firestore.FirebaseFirestore
+
 
 // ---------------- COMPONENTS ----------------
 
@@ -114,10 +118,17 @@ fun SplashScreen(onFinish: () -> Unit) {
 // ---------------- LOGIN SCREEN ----------------
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit) {
+fun LoginScreen(
+    onLogin: () -> Unit,
+    onSignupClick: () -> Unit
+) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -151,7 +162,7 @@ fun LoginScreen(onLogin: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Manage your community space easily.",
+            text = "Login to continue",
             color = Color.Gray,
             fontSize = 15.sp
         )
@@ -179,25 +190,78 @@ fun LoginScreen(onLogin: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = onLogin,
+            onClick = {
+
+                isLoading = true
+
+                auth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+
+                        isLoading = false
+
+                        if (task.isSuccessful) {
+
+                            Toast.makeText(
+                                context,
+                                "Login Successful",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            onLogin()
+
+                        } else {
+
+                            Toast.makeText(
+                                context,
+                                task.exception?.message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+            },
+
             modifier = Modifier
                 .fillMaxWidth()
                 .height(58.dp),
+
             shape = RoundedCornerShape(50.dp),
+
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2E8B2E)
             )
         ) {
 
+            if (isLoading) {
+
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp
+                )
+
+            } else {
+
+                Text(
+                    "Login",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        TextButton(
+            onClick = onSignupClick,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
             Text(
-                "Sign In",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                "Don't have an account? Sign Up",
+                color = Color(0xFF2E8B2E)
             )
         }
     }
 }
-
 // ---------------- HOME DASHBOARD ----------------
 
 @Composable
@@ -234,11 +298,23 @@ fun HomeDashboard(navController: NavController) {
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = Color(0xFFE8DDFB),
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier
+                    .size(52.dp)
+                    .clickable {
+
+                        FirebaseAuth.getInstance().signOut()
+
+                        navController.navigate("login") {
+
+                            popUpTo("home") {
+                                inclusive = true
+                            }
+                        }
+                    }
             ) {
 
                 Icon(
-                    Icons.Default.Person,
+                    Icons.Default.Logout,
                     contentDescription = null,
                     tint = Color(0xFF2E8B2E),
                     modifier = Modifier.padding(14.dp)
@@ -344,11 +420,11 @@ fun HomeDashboard(navController: NavController) {
             item {
 
                 ModernGridItem(
-                    title = "Board",
+                    title = "Bookings",
                     icon = Icons.Default.List,
                     bgColor = Color(0xFFF1F1F1)
                 ) {
-                    navController.navigate("board")
+                    navController.navigate("adminBookings")
                 }
             }
         }
@@ -458,6 +534,174 @@ fun HomeDashboard(navController: NavController) {
     }
 }
 
+@Composable
+fun SignupScreen(
+    onSignupSuccess: () -> Unit,
+    onBackToLogin: () -> Unit
+) {
+
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(28.dp),
+        verticalArrangement = Arrangement.Center
+    ) {
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = Color(0xFFE7F6EA),
+            modifier = Modifier.size(72.dp)
+        ) {
+
+            Icon(
+                Icons.Default.PersonAdd,
+                contentDescription = null,
+                tint = Color(0xFF2E8B2E),
+                modifier = Modifier.padding(18.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = "Create Account",
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Sign up to continue",
+            color = Color.Gray,
+            fontSize = 15.sp
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp)
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp)
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = { Text("Confirm Password") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = {
+
+                if (password != confirmPassword) {
+
+                    Toast.makeText(
+                        context,
+                        "Passwords do not match",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@Button
+                }
+
+                isLoading = true
+
+                auth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+
+                        isLoading = false
+
+                        if (task.isSuccessful) {
+
+                            Toast.makeText(
+                                context,
+                                "Account Created",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            onSignupSuccess()
+
+                        } else {
+
+                            Toast.makeText(
+                                context,
+                                task.exception?.message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+            },
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp),
+
+            shape = RoundedCornerShape(50.dp),
+
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF2E8B2E)
+            )
+        ) {
+
+            if (isLoading) {
+
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp
+                )
+
+            } else {
+
+                Text(
+                    "Sign Up",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        TextButton(
+            onClick = onBackToLogin,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+
+            Text(
+                "Already have an account? Login",
+                color = Color(0xFF2E8B2E)
+            )
+        }
+    }
+}
 // ---------------- MODERN GRID ITEM ----------------
 
 @Composable
@@ -856,6 +1100,14 @@ fun EventCalendarScreen() {
 @Composable
 fun BookingRequestScreen(onSuccess: () -> Unit) {
 
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var purpose by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -872,8 +1124,8 @@ fun BookingRequestScreen(onSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = name,
+            onValueChange = { name = it },
             label = { Text("Full Name") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp)
@@ -882,8 +1134,8 @@ fun BookingRequestScreen(onSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = phone,
+            onValueChange = { phone = it },
             label = { Text("Phone Number") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp)
@@ -892,8 +1144,8 @@ fun BookingRequestScreen(onSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = purpose,
+            onValueChange = { purpose = it },
             label = { Text("Purpose") },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
@@ -903,24 +1155,89 @@ fun BookingRequestScreen(onSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = onSuccess,
+            onClick = {
+
+                if (
+                    name.isEmpty() ||
+                    phone.isEmpty() ||
+                    purpose.isEmpty()
+                ) {
+
+                    Toast.makeText(
+                        context,
+                        "Fill all fields",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@Button
+                }
+
+                isLoading = true
+
+                val bookingData = hashMapOf(
+                    "name" to name,
+                    "phone" to phone,
+                    "purpose" to purpose,
+                    "timestamp" to System.currentTimeMillis()
+                )
+
+                db.collection("bookings")
+                    .add(bookingData)
+
+                    .addOnSuccessListener {
+
+                        isLoading = false
+
+                        Toast.makeText(
+                            context,
+                            "Booking Request Sent",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        onSuccess()
+                    }
+
+                    .addOnFailureListener {
+
+                        isLoading = false
+
+                        Toast.makeText(
+                            context,
+                            it.message,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+            },
+
             modifier = Modifier
                 .fillMaxWidth()
                 .height(58.dp),
+
             shape = RoundedCornerShape(50.dp),
+
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2E8B2E)
             )
         ) {
 
-            Text(
-                "Submit Request",
-                fontWeight = FontWeight.Bold
-            )
+            if (isLoading) {
+
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp
+                )
+
+            } else {
+
+                Text(
+                    "Submit Request",
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
-
 // ---------------- MAINTENANCE SCREEN ----------------
 
 @Composable
@@ -1125,31 +1442,23 @@ fun MaintenanceJarScreen() {
 @Composable
 fun EventBoardScreen() {
 
-    val events = listOf(
-        Triple(
-            "Annual Sports Meet",
-            "Community Event",
-            "May 18 • Main Ground"
-        ),
+    val db = FirebaseFirestore.getInstance()
 
-        Triple(
-            "Village Music Night",
-            "Cultural Event",
-            "May 21 • Community Hall"
-        ),
+    var events by remember {
+        mutableStateOf(listOf<Map<String, Any>>())
+    }
 
-        Triple(
-            "Agriculture Workshop",
-            "Educational",
-            "May 24 • Hall Room B"
-        ),
+    LaunchedEffect(Unit) {
 
-        Triple(
-            "Wedding Ceremony",
-            "Private Event",
-            "May 27 • Main Hall"
-        )
-    )
+        db.collection("events")
+            .get()
+            .addOnSuccessListener { result ->
+
+                events = result.documents.mapNotNull {
+                    it.data
+                }
+            }
+    }
 
     Column(
         modifier = Modifier
@@ -1157,8 +1466,6 @@ fun EventBoardScreen() {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-
-        // HEADER
 
         Text(
             "Event Board",
@@ -1175,8 +1482,6 @@ fun EventBoardScreen() {
         )
 
         Spacer(modifier = Modifier.height(28.dp))
-
-        // FEATURED EVENT
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1239,8 +1544,6 @@ fun EventBoardScreen() {
 
         Spacer(modifier = Modifier.height(30.dp))
 
-        // SECTION TITLE
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -1253,7 +1556,7 @@ fun EventBoardScreen() {
             )
 
             Text(
-                "4 Events",
+                "${events.size} Events",
                 color = Color.Gray,
                 fontWeight = FontWeight.SemiBold
             )
@@ -1261,18 +1564,19 @@ fun EventBoardScreen() {
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // EVENT LIST
-
         events.forEachIndexed { index, event ->
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
+
                 shape = RoundedCornerShape(26.dp),
+
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
                 ),
+
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 6.dp
                 )
@@ -1283,12 +1587,11 @@ fun EventBoardScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    // DATE BOX
-
                     Surface(
                         shape = RoundedCornerShape(18.dp),
+
                         color =
-                            when(index) {
+                            when(index % 4) {
                                 0 -> Color(0xFFE7F6EA)
                                 1 -> Color(0xFFE8E8FF)
                                 2 -> Color(0xFFFFF1DD)
@@ -1304,7 +1607,7 @@ fun EventBoardScreen() {
                         ) {
 
                             Text(
-                                "MAY",
+                                "EVENT",
                                 fontSize = 10.sp,
                                 color = Color.Gray,
                                 fontWeight = FontWeight.Bold
@@ -1313,7 +1616,7 @@ fun EventBoardScreen() {
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                "${18 + (index * 3)}",
+                                "${index + 1}",
                                 fontWeight = FontWeight.Black,
                                 fontSize = 20.sp
                             )
@@ -1322,14 +1625,12 @@ fun EventBoardScreen() {
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // EVENT INFO
-
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
 
                         Text(
-                            event.second.uppercase(),
+                            event["category"].toString().uppercase(),
                             color = Color.Gray,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp
@@ -1338,7 +1639,7 @@ fun EventBoardScreen() {
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            event.first,
+                            event["title"].toString(),
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
@@ -1359,7 +1660,10 @@ fun EventBoardScreen() {
                             Spacer(modifier = Modifier.width(4.dp))
 
                             Text(
-                                event.third,
+                                event["date"].toString() +
+                                        " • " +
+                                        event["location"].toString(),
+
                                 color = Color.Gray,
                                 fontSize = 13.sp
                             )
@@ -1376,5 +1680,84 @@ fun EventBoardScreen() {
         }
 
         Spacer(modifier = Modifier.height(100.dp))
+    }
+}
+
+@Composable
+fun AdminBookingsScreen() {
+
+    val db = FirebaseFirestore.getInstance()
+
+    var bookings by remember {
+        mutableStateOf(listOf<Map<String, Any>>())
+    }
+
+    LaunchedEffect(Unit) {
+
+        db.collection("bookings")
+            .get()
+            .addOnSuccessListener { result ->
+
+                bookings = result.documents.mapNotNull {
+                    it.data
+                }
+            }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        Text(
+            "Booking Requests",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        bookings.forEach { booking ->
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+
+                shape = RoundedCornerShape(24.dp),
+
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 5.dp
+                )
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+
+                    Text(
+                        booking["name"].toString(),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        "Phone: ${booking["phone"]}",
+                        color = Color.Gray
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        "Purpose: ${booking["purpose"]}",
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
     }
 }
