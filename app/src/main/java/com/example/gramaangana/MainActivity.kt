@@ -115,17 +115,29 @@ fun GramaAnganaApp() {
             }
 
             composable("calendar") {
-                EventCalendarScreen()
+                EventCalendarScreen(navController)
             }
 
-            composable("booking") {
+            composable(
+                "booking/{selectedDate}"
+            ) { backStackEntry ->
+
+                val selectedDate =
+                    backStackEntry.arguments
+                        ?.getString("selectedDate")
+                        ?: ""
+
                 BookingRequestScreen(
+
+                    navController = navController,
+
+                    selectedDate = selectedDate,
+
                     onSuccess = {
                         navController.popBackStack()
                     }
                 )
             }
-
             composable("maintenance") {
                 MaintenanceJarScreen()
             }
