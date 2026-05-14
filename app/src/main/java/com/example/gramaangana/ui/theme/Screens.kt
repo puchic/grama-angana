@@ -35,6 +35,11 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.animation.animateContentSize
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.YearMonth
+
 
 
 // ---------------- COMPONENTS ----------------
@@ -151,6 +156,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(28.dp),
 
         verticalArrangement = Arrangement.Center
@@ -352,18 +358,45 @@ fun HomeDashboard(navController: NavController) {
         mutableStateOf<Map<String, Any>?>(null)
     }
 
+    var events by remember {
+        mutableStateOf(listOf<Map<String, Any>>())
+    }
+
     LaunchedEffect(Unit) {
 
         db.collection("bookings")
-            .whereEqualTo("status", "BOOKED")
-            .orderBy("timestamp")
+
+            .whereEqualTo(
+                "userId",
+                FirebaseAuth
+                    .getInstance()
+                    .currentUser
+                    ?.uid
+            )
+
+            .orderBy(
+                "timestamp",
+                Query.Direction.DESCENDING
+            )
+
             .limit(1)
+
             .get()
 
             .addOnSuccessListener { result ->
 
                 nextBooking =
                     result.documents.firstOrNull()?.data
+            }
+
+        db.collection("events")
+            .get()
+            .addOnSuccessListener { result ->
+
+                events =
+                    result.documents.mapNotNull {
+                        it.data
+                    }
             }
     }
 
@@ -376,35 +409,46 @@ fun HomeDashboard(navController: NavController) {
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween,
+
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
 
             Column {
 
                 Text(
                     text = "Community Hall Management",
+
                     color = Color.Gray,
+
                     fontSize = 14.sp
                 )
 
                 Text(
                     text = "Grama Angana",
+
                     fontWeight = FontWeight.Bold,
+
                     fontSize = 34.sp,
+
                     color = Color(0xFF1F1F1F)
                 )
             }
 
             Surface(
                 shape = RoundedCornerShape(18.dp),
+
                 color = Color(0xFFE8DDFB),
 
                 modifier = Modifier
                     .size(52.dp)
                     .clickable {
 
-                        FirebaseAuth.getInstance().signOut()
+                        FirebaseAuth.getInstance()
+                            .signOut()
 
                         navController.navigate("login") {
 
@@ -417,6 +461,7 @@ fun HomeDashboard(navController: NavController) {
 
                 Icon(
                     Icons.Default.Logout,
+
                     contentDescription = null,
 
                     tint = Color(0xFF2E8B2E),
@@ -429,9 +474,13 @@ fun HomeDashboard(navController: NavController) {
         Spacer(modifier = Modifier.height(28.dp))
 
         Card(
+
+            onClick = { },
+
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp),
+                .height(190.dp)
+                .animateContentSize(),
 
             shape = RoundedCornerShape(30.dp),
 
@@ -445,7 +494,8 @@ fun HomeDashboard(navController: NavController) {
                     .fillMaxSize()
                     .padding(24.dp),
 
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement =
+                    Arrangement.SpaceBetween
             ) {
 
                 Column {
@@ -460,7 +510,9 @@ fun HomeDashboard(navController: NavController) {
                         fontWeight = FontWeight.Black
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
 
                     Text(
                         "Track upcoming bookings and community events in real time.",
@@ -474,7 +526,8 @@ fun HomeDashboard(navController: NavController) {
                 }
 
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
                     Box(
@@ -486,7 +539,9 @@ fun HomeDashboard(navController: NavController) {
                             )
                     )
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(
+                        modifier = Modifier.width(10.dp)
+                    )
 
                     Text(
 
@@ -495,7 +550,7 @@ fun HomeDashboard(navController: NavController) {
 
                                 "Upcoming booking: " +
                                         "${nextBooking?.get("date") ?: "--"} • " +
-                                        "${nextBooking?.get("time") ?: "--"}"
+                                        "${nextBooking?.get("fromTime") ?: "--"}"
 
                             else
 
@@ -518,18 +573,23 @@ fun HomeDashboard(navController: NavController) {
 
             modifier = Modifier.height(300.dp),
 
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement =
+                Arrangement.spacedBy(16.dp),
 
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement =
+                Arrangement.spacedBy(16.dp)
         ) {
 
             item {
 
                 ModernGridItem(
                     title = "Calendar",
+
                     icon = Icons.Default.DateRange,
+
                     bgColor = Color(0xFFE7F6EA)
                 ) {
+
                     navController.navigate("calendar")
                 }
             }
@@ -538,10 +598,15 @@ fun HomeDashboard(navController: NavController) {
 
                 ModernGridItem(
                     title = "Booking",
+
                     icon = Icons.Default.Add,
+
                     bgColor = Color(0xFFE8E8FF)
                 ) {
-                    navController.navigate("booking/manual")
+
+                    navController.navigate(
+                        "booking/manual"
+                    )
                 }
             }
 
@@ -549,10 +614,15 @@ fun HomeDashboard(navController: NavController) {
 
                 ModernGridItem(
                     title = "Funds",
+
                     icon = Icons.Default.Build,
+
                     bgColor = Color(0xFFFFE5FB)
                 ) {
-                    navController.navigate("maintenance")
+
+                    navController.navigate(
+                        "maintenance"
+                    )
                 }
             }
 
@@ -560,10 +630,15 @@ fun HomeDashboard(navController: NavController) {
 
                 ModernGridItem(
                     title = "Bookings",
+
                     icon = Icons.Default.List,
+
                     bgColor = Color(0xFFF1F1F1)
                 ) {
-                    navController.navigate("adminBookings")
+
+                    navController.navigate(
+                        "adminBookings"
+                    )
                 }
             }
         }
@@ -573,7 +648,8 @@ fun HomeDashboard(navController: NavController) {
         Row(
             modifier = Modifier.fillMaxWidth(),
 
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement =
+                Arrangement.SpaceBetween
         ) {
 
             Text(
@@ -585,34 +661,49 @@ fun HomeDashboard(navController: NavController) {
             )
 
             Text(
+
                 "See All",
 
                 color = Color(0xFF2E8B2E),
 
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+
+                modifier = Modifier.clickable {
+
+                    navController.navigate("board")
+                }
             )
         }
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        repeat(2) {
+        events.take(2).forEach { event ->
 
             Card(
+
+                onClick = {
+
+                    navController.navigate("board")
+                },
+
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 14.dp),
+                    .padding(bottom = 14.dp)
+                    .animateContentSize(),
 
                 shape = RoundedCornerShape(24.dp),
 
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 5.dp
-                )
+                elevation =
+                    CardDefaults.cardElevation(
+                        defaultElevation = 5.dp
+                    )
             ) {
 
                 Row(
                     modifier = Modifier.padding(18.dp),
 
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
                     Surface(
@@ -624,13 +715,23 @@ fun HomeDashboard(navController: NavController) {
                     ) {
 
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment =
+                                Alignment.CenterHorizontally,
 
-                            verticalArrangement = Arrangement.Center
+                            verticalArrangement =
+                                Arrangement.Center
                         ) {
 
+                            val dateText =
+                                event["date"].toString()
+
+                            val splitDate =
+                                dateText.split(" ")
+
                             Text(
-                                "MAY",
+                                splitDate.firstOrNull()
+                                    ?.uppercase()
+                                    ?: "",
 
                                 fontSize = 10.sp,
 
@@ -638,37 +739,40 @@ fun HomeDashboard(navController: NavController) {
                             )
 
                             Text(
-                                if (it == 0) "15" else "20",
+                                splitDate.getOrNull(1)
+                                    ?: "",
 
-                                fontWeight = FontWeight.Bold
+                                fontWeight =
+                                    FontWeight.Bold
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(
+                        modifier = Modifier.width(16.dp)
+                    )
 
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
 
                         Text(
-                            if (it == 0)
-                                "Monthly Village Meeting"
-                            else
-                                "Wedding: Kamal & Sunila",
+                            event["title"].toString(),
 
-                            fontWeight = FontWeight.Bold,
+                            fontWeight =
+                                FontWeight.Bold,
 
                             fontSize = 17.sp
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(
+                            modifier = Modifier.height(4.dp)
+                        )
 
                         Text(
-                            if (it == 0)
-                                "Community Gathering"
-                            else
-                                "Private Event",
+                            event["category"]
+                                ?.toString()
+                                ?: "Community Event",
 
                             color = Color.Gray,
 
@@ -678,6 +782,7 @@ fun HomeDashboard(navController: NavController) {
 
                     Icon(
                         Icons.Default.KeyboardArrowRight,
+
                         contentDescription = null,
 
                         tint = Color.LightGray
@@ -723,6 +828,7 @@ fun SignupScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(28.dp),
 
         verticalArrangement = Arrangement.Center
@@ -1099,12 +1205,59 @@ fun EventCalendarScreen(
 
     val db = FirebaseFirestore.getInstance()
 
+    var currentMonth by remember {
+        mutableStateOf(5)
+    }
+
+    var currentYear by remember {
+        mutableStateOf(2026)
+    }
+
+    val monthNames = listOf(
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+    )
+
+    val yearMonth =
+        YearMonth.of(currentYear, currentMonth)
+
+    val daysInMonth =
+        yearMonth.lengthOfMonth()
+
+    val firstDayOfMonth =
+        LocalDate.of(
+            currentYear,
+            currentMonth,
+            1
+        ).dayOfWeek
+
+    val startOffset = when (firstDayOfMonth) {
+
+        DayOfWeek.SUNDAY -> 0
+        DayOfWeek.MONDAY -> 1
+        DayOfWeek.TUESDAY -> 2
+        DayOfWeek.WEDNESDAY -> 3
+        DayOfWeek.THURSDAY -> 4
+        DayOfWeek.FRIDAY -> 5
+        DayOfWeek.SATURDAY -> 6
+    }
+
     var events by remember {
         mutableStateOf(listOf<Map<String, Any>>())
     }
 
     var bookedDates by remember {
-        mutableStateOf(listOf<Int>())
+        mutableStateOf(listOf<String>())
     }
 
     LaunchedEffect(Unit) {
@@ -1124,13 +1277,7 @@ fun EventCalendarScreen(
 
                 bookedDates = result.documents.mapNotNull {
 
-                    val dateString =
-                        it.getString("date")
-
-                    dateString
-                        ?.split(" ")
-                        ?.getOrNull(1)
-                        ?.toIntOrNull()
+                    it.getString("date")
                 }
             }
     }
@@ -1160,6 +1307,7 @@ fun EventCalendarScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+
             shape = RoundedCornerShape(30.dp),
 
             colors = CardDefaults.cardColors(
@@ -1177,63 +1325,116 @@ fun EventCalendarScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween,
+
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
+                    IconButton(
+                        onClick = {
+
+                            if (currentMonth == 1) {
+
+                                currentMonth = 12
+                                currentYear--
+
+                            } else {
+
+                                currentMonth--
+                            }
+                        }
+                    ) {
+
+                        Icon(
+                            Icons.Default.KeyboardArrowLeft,
+                            contentDescription = null
+                        )
+                    }
+
                     Text(
-                        "MAY 2026",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp
+                        "${monthNames[currentMonth - 1]} $currentYear",
+
+                        fontSize = 24.sp,
+
+                        fontWeight = FontWeight.Bold
                     )
 
-                    Row {
+                    IconButton(
+                        onClick = {
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                            if (currentMonth == 12) {
 
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .background(
-                                        Color(0xFFDDF5DD),
-                                        CircleShape
-                                    )
-                            )
+                                currentMonth = 1
+                                currentYear++
 
-                            Spacer(modifier = Modifier.width(6.dp))
+                            } else {
 
-                            Text(
-                                "Free",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
+                                currentMonth++
+                            }
                         }
+                    ) {
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            Icons.Default.KeyboardArrowRight,
+                            contentDescription = null
+                        )
+                    }
+                }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                Spacer(modifier = Modifier.height(14.dp))
 
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .background(
-                                        Color(0xFFFFE0E0),
-                                        CircleShape
-                                    )
-                            )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
 
-                            Spacer(modifier = Modifier.width(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
 
-                            Text(
-                                "Booked",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                        }
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(
+                                    Color(0xFFDDF5DD),
+                                    CircleShape
+                                )
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            "Free",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(
+                                    Color(0xFFFFE0E0),
+                                    CircleShape
+                                )
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            "Booked",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
                 }
 
@@ -1244,13 +1445,25 @@ fun EventCalendarScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
 
-                    listOf("S","M","T","W","T","F","S").forEach {
+                    listOf(
+                        "S",
+                        "M",
+                        "T",
+                        "W",
+                        "T",
+                        "F",
+                        "S"
+                    ).forEach {
 
                         Text(
                             it,
+
                             modifier = Modifier.width(36.dp),
+
                             color = Color.Gray,
+
                             fontWeight = FontWeight.SemiBold,
+
                             fontSize = 12.sp
                         )
                     }
@@ -1261,7 +1474,7 @@ fun EventCalendarScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(7),
 
-                    modifier = Modifier.height(280.dp),
+                    modifier = Modifier.height(320.dp),
 
                     verticalArrangement = Arrangement.spacedBy(10.dp),
 
@@ -1270,51 +1483,65 @@ fun EventCalendarScreen(
                     userScrollEnabled = false
                 ) {
 
-                    items(31) { index ->
+                    items(startOffset + daysInMonth) { index ->
 
-                        val day = index + 1
+                        if (index < startOffset) {
 
-                        val isBooked =
-                            bookedDates.contains(day)
-
-                        Box(
-                            modifier = Modifier.clickable {
-
-                                if (!isBooked) {
-
-                                    navController.navigate(
-                                        "booking/$day"
-                                    )
-                                }
-                            }
-                        ) {
-
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-
-                                color =
-                                    if (isBooked)
-                                        Color(0xFFFFEAEA)
-                                    else
-                                        Color(0xFFDDF5DD),
-
+                            Box(
                                 modifier = Modifier.size(42.dp)
+                            )
+
+                        } else {
+
+                            val day =
+                                index - startOffset + 1
+
+                            val currentDate =
+                                "${monthNames[currentMonth - 1]} $day"
+
+                            val isBooked =
+                                bookedDates.contains(currentDate)
+
+                            Box(
+                                modifier = Modifier.clickable {
+
+                                    if (!isBooked) {
+
+                                        navController.navigate(
+                                            "booking/$day"
+                                        )
+                                    }
+                                }
                             ) {
 
-                                Box(
-                                    contentAlignment = Alignment.Center
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+
+                                    color =
+                                        if (isBooked)
+                                            Color(0xFFFFEAEA)
+                                        else
+                                            Color(0xFFDDF5DD),
+
+                                    modifier = Modifier.size(42.dp)
                                 ) {
 
-                                    Text(
-                                        "$day",
-                                        fontWeight = FontWeight.Bold,
+                                    Box(
+                                        contentAlignment = Alignment.Center
+                                    ) {
 
-                                        color =
-                                            if (isBooked)
-                                                Color(0xFFD32F2F)
-                                            else
-                                                Color(0xFF2E7D32)
-                                    )
+                                        Text(
+                                            "$day",
+
+                                            fontWeight = FontWeight.Bold,
+
+                                            color =
+                                                if (isBooked)
+                                                    Color(0xFFD32F2F)
+                                                else
+                                                    Color(0xFF2E7D32)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1336,9 +1563,13 @@ fun EventCalendarScreen(
         events.forEach { event ->
 
             Card(
+
+                onClick = { },
+
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 14.dp),
+                    .padding(bottom = 14.dp)
+                    .animateContentSize(),
 
                 shape = RoundedCornerShape(24.dp),
 
@@ -1350,9 +1581,11 @@ fun EventCalendarScreen(
                 Row(
                     modifier = Modifier.padding(18.dp),
 
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween,
 
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
                     Column(
@@ -1363,7 +1596,9 @@ fun EventCalendarScreen(
                             event["date"].toString().uppercase(),
 
                             color = Color.Gray,
+
                             fontSize = 11.sp,
+
                             fontWeight = FontWeight.Bold
                         )
 
@@ -1373,6 +1608,7 @@ fun EventCalendarScreen(
                             event["title"].toString(),
 
                             fontWeight = FontWeight.Bold,
+
                             fontSize = 18.sp
                         )
                     }
@@ -1402,6 +1638,7 @@ fun EventCalendarScreen(
                                     Color(0xFFD32F2F),
 
                             fontWeight = FontWeight.Bold,
+
                             fontSize = 11.sp
                         )
                     }
@@ -1467,19 +1704,21 @@ fun BookingRequestScreen(
 
         Card(
 
+            onClick = {
+
+                navController.navigate("calendar")
+            },
+
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable {
-
-                    navController.navigate("calendar")
-                },
+                .animateContentSize(),
 
             shape = RoundedCornerShape(18.dp),
 
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFE7F6EA)
             )
-        ) {
+        ){
 
             Text(
 
@@ -1664,15 +1903,26 @@ fun BookingRequestScreen(
                 val bookingData = hashMapOf(
 
                     "name" to name,
-                    "phone" to phone,
-                    "date" to bookingDate,
-                    "fromTime" to fromTime,
-                    "toTime" to toTime,
-                    "purpose" to purpose,
-                    "status" to "BOOKED",
-                    "timestamp" to System.currentTimeMillis()
-                )
 
+                    "phone" to phone,
+
+                    "date" to bookingDate,
+
+                    "fromTime" to fromTime,
+
+                    "toTime" to toTime,
+
+                    "purpose" to purpose,
+
+                    "status" to "BOOKED",
+
+                    "timestamp" to System.currentTimeMillis(),
+
+                    "userId" to FirebaseAuth
+                        .getInstance()
+                        .currentUser
+                        ?.uid
+                )
                 db.collection("bookings")
                     .add(bookingData)
 
@@ -1869,9 +2119,13 @@ fun MaintenanceJarScreen() {
                 collected / target
 
             Card(
+
+                onClick = { },
+
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 18.dp),
+                    .padding(bottom = 18.dp)
+                    .animateContentSize(),
 
                 shape = RoundedCornerShape(28.dp),
 
@@ -2121,7 +2375,10 @@ fun EventBoardScreen() {
             val featuredEvent = events.first()
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize()
+                    .clickable { },
 
                 shape = RoundedCornerShape(30.dp),
 
@@ -2218,7 +2475,9 @@ fun EventBoardScreen() {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .animateContentSize()
+                    .clickable { },
 
                 shape = RoundedCornerShape(28.dp),
 
@@ -2330,6 +2589,7 @@ fun EventBoardScreen() {
         Spacer(modifier = Modifier.height(100.dp))
     }
 }
+
 @Composable
 fun AdminBookingsScreen() {
 
@@ -2345,10 +2605,24 @@ fun AdminBookingsScreen() {
 
         db.collection("bookings")
 
-            .orderBy(
-                "timestamp",
-                Query.Direction.DESCENDING
+            .whereEqualTo(
+                "userId",
+                FirebaseAuth
+                    .getInstance()
+                    .currentUser
+                    ?.uid
             )
+
+        db.collection("bookings")
+
+            .whereEqualTo(
+                "userId",
+                FirebaseAuth
+                    .getInstance()
+                    .currentUser
+                    ?.uid
+            )
+
 
             .addSnapshotListener { result, _ ->
 
@@ -2389,9 +2663,13 @@ fun AdminBookingsScreen() {
             val booking = bookingPair.second
 
             Card(
+
+                onClick = { },
+
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .animateContentSize(),
 
                 shape = RoundedCornerShape(24.dp),
 
@@ -2436,7 +2714,8 @@ fun AdminBookingsScreen() {
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        "Time: ${booking["time"] ?: "--"}",
+                        "Time: ${booking["fromTime"] ?: "--"} - ${booking["toTime"] ?: "--"}",
+
                         color = Color.Gray
                     )
 
@@ -2474,23 +2753,29 @@ fun AdminBookingsScreen() {
                                 .document(bookingId)
                                 .delete()
 
-                            db.collection("calendar")
-                                .whereEqualTo(
-                                    "title",
-                                    booking["purpose"]
-                                )
-                                .whereEqualTo(
-                                    "date",
-                                    "May ${booking["date"]}"
-                                )
-                                .get()
+                                .addOnSuccessListener {
 
-                                .addOnSuccessListener { result ->
+                                    db.collection("calendar")
 
-                                    result.documents.forEach {
+                                        .whereEqualTo(
+                                            "title",
+                                            booking["purpose"]
+                                        )
 
-                                        it.reference.delete()
-                                    }
+                                        .whereEqualTo(
+                                            "date",
+                                            "${booking["month"]} ${booking["date"]}"
+                                        )
+
+                                        .get()
+
+                                        .addOnSuccessListener { result ->
+
+                                            result.documents.forEach { document ->
+
+                                                document.reference.delete()
+                                            }
+                                        }
                                 }
                         },
 
@@ -2504,6 +2789,7 @@ fun AdminBookingsScreen() {
                         ),
 
                         shape = RoundedCornerShape(50.dp)
+
                     ) {
 
                         Icon(
